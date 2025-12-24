@@ -1,0 +1,179 @@
+import React, { useState, useEffect } from 'react';
+import { CheckCircle2, Circle, Phone, Users, Clock, Target, Copy, RotateCcw } from 'lucide-react';
+
+const RealEstateTracker = () => {
+  // --- STATE INITIALIZATION (Pulling from LocalStorage) ---
+  const [contacts, setContacts] = useState(() => Number(localStorage.getItem('contacts')) || 0);
+  const [dials, setDials] = useState(() => Number(localStorage.getItem('dials')) || 0);
+  const [leads, setLeads] = useState(() => Number(localStorage.getItem('leads')) || 0);
+  const [eodPoints, setEodPoints] = useState(() => Number(localStorage.getItem('eodPoints')) || 0);
+  const [notes, setNotes] = useState(() => localStorage.getItem('notes') || '');
+  const [lastSavedDate, setLastSavedDate] = useState(() => localStorage.getItem('lastSavedDate') || new Date().toLocaleDateString());
+
+  const initialSchedule = [
+    { id: 'update', time: '5:00 AM', label: 'Real Estate Update/Articles/To-do List', completed: false },
+    { id: 'roleplay', time: '5:30 AM', label: 'Role Play/Script Practice', completed: false },
+    { id: 'preaching', time: '6:00 AM', label: 'Preaching for the Appointment', completed: false },
+    { id: 'followup', time: '7:00 AM', label: 'Lead Follow Up', completed: false },
+    { id: 'lunch', time: '12:00 PM', label: 'Lunch Break', completed: false },
+    { id: 'prep', time: '1:00 PM', label: 'Appointment Preparation/Pre-Listing Pkg', completed: false },
+    { id: 'listing', time: '2:00 PM', label: 'Listing Appointments', completed: false },
+    { id: 'gravy', time: '4:00 PM', label: 'Gravy Time', completed: false },
+    { id: 'eod', time: '5:00 PM', label: 'EOD 4 Points Minimum', completed: false }
+  ];
+
+  const [schedule, setSchedule] = useState(() => {
+    const saved = localStorage.getItem('schedule');
+    return saved ? JSON.parse(saved) : initialSchedule;
+  });
+
+  // --- PERSISTENCE & AUTO-RESET ---
+  useEffect(() => {
+    const today = new Date().toLocaleDateString();
+    if (today !== lastSavedDate) {
+      if (window.confirm("New day detected! Would you like to clear yesterday's stats?")) {
+        resetTracker();
+      }
+      setLastSavedDate(today);
+      localStorage.setItem('lastSavedDate', today);
+    }
+    
+    // Save state on every change
+    localStorage.setItem('contacts', contacts);
+    localStorage.setItem('dials', dials);
+    localStorage.setItem('leads', leads);
+    localStorage.setItem('eodPoints', eodPoints);
+    localStorage.setItem('schedule', JSON.stringify(schedule));
+    localStorage.setItem('notes', notes);
+  }, [contacts, dials, leads, eodPoints, schedule, notes, lastSavedDate]);
+
+  const resetTracker = () => {
+    setContacts(0);
+    setDials(0);
+    setLeads(0);
+    setEodPoints(0);
+    setSchedule(initialSchedule);
+    setNotes('');
+  };
+
+  const toggleScheduleItem = (id) => {
+    setSchedule(prev => prev.map(item =>
+      item.id === id ? { ...item, completed: !item.completed } : item
+    ));
+  };
+
+  const copyToClipboard = () => {
+    const summary = `📊 Edgar's Last Stand - ${lastSavedDate}\n\nContacts: ${contacts}/25\nDials: ${dials}\nLeads: ${leads}/8\nEOD Points: ${eodPoints}/4\n\nNotes: ${notes}`;
+    navigator.clipboard.writeText(summary);
+    alert("Summary copied to clipboard!");
+  };
+
+  const progress = Math.round((schedule.filter(item => item.completed).length / schedule.length) * 100);
+
+  return (
+    <div className="max-w-xl mx-auto p-4 bg-gray-50 min-h-screen pb-24">
+      <header className="mb-6 sticky top-0 bg-gray-50 pt-2 pb-4 z-10 border-b">
+        <div className="flex justify-between items-start">
+          <div>
+            <h1 className="text-2xl font-black text-gray-900 leading-tight tracking-tight">EDGAR'S LAST STAND</h1>
+            <p className="text-xs font-bold text-blue-600 uppercase tracking-widest">{lastSavedDate}</p>
+          </div>
+          <button onClick={resetTracker} className="p-2 text-gray-400 hover:text-red-500 transition-colors">
+            <RotateCcw className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="mt-4">
+          <div className="flex justify-between text-xs font-bold mb-1 uppercase text-gray-500">
+            <span>Daily Momentum</span>
+            <span>{progress}%</span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-3">
+            <div className="bg-blue-600 h-3 rounded-full transition-all duration-700" style={{ width: `${progress}%` }} />
+          </div>
+        </div>
+      </header>
+
+      {/* BIG TOUCH METRICS */}
+      <div className="grid grid-cols-2 gap-3 mb-6">
+        <MetricCard icon={<Users className="text-blue-600"/>} label="Contacts" value={contacts} setter={setContacts} color="blue" goal={25} />
+        <MetricCard icon={<Target className="text-purple-600"/>} label="Leads" value={leads} setter={setLeads} color="purple" goal={8} />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 mb-6">
+         <InputCard icon={<Phone className="text-green-600"/>} label="Dials" value={dials} setter={setDials} color="green" />
+         <InputCard icon={<CheckCircle2 className="text-orange-600"/>} label="EOD Points" value={eodPoints} setter={setEodPoints} color="orange" goal={4} />
+      </div>
+
+      {/* SCHEDULE */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-6">
+        <div className="p-4 border-b bg-gray-50 flex items-center gap-2">
+          <Clock className="w-4 h-4 text-gray-500" />
+          <h2 className="text-sm font-black uppercase tracking-wider text-gray-700">Business Schedule</h2>
+        </div>
+        {schedule.map(item => (
+          <div 
+            key={item.id} 
+            onClick={() => toggleScheduleItem(item.id)}
+            className={`flex items-center gap-4 p-4 border-b last:border-0 active:bg-gray-100 transition-colors ${item.completed ? 'bg-green-50/50' : 'bg-white'}`}
+          >
+            {item.completed ? <CheckCircle2 className="w-6 h-6 text-green-500" /> : <Circle className="w-6 h-6 text-gray-300" />}
+            <div className="flex flex-col">
+              <span className={`text-[10px] font-bold ${item.completed ? 'text-green-600' : 'text-blue-600'}`}>{item.time}</span>
+              <span className={`text-sm font-semibold ${item.completed ? 'text-gray-400 line-through' : 'text-gray-800'}`}>{item.label}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* NOTES */}
+      <div className="mb-6">
+        <textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="Wins, Listings, Lessons..."
+          className="w-full p-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:outline-none min-h-[120px] shadow-sm text-sm"
+        />
+      </div>
+
+      {/* ACTIONS */}
+      <button 
+        onClick={copyToClipboard}
+        className="w-full bg-gray-900 text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-transform"
+      >
+        <Copy className="w-5 h-5" /> COPY DAILY SUMMARY
+      </button>
+    </div>
+  );
+};
+
+// Helper Component for Tap Counters
+const MetricCard = ({ icon, label, value, setter, color, goal }) => (
+  <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm flex flex-col items-center text-center">
+    <div className="mb-1">{icon}</div>
+    <span className="text-[10px] font-bold uppercase text-gray-400 tracking-tighter mb-2">{label}</span>
+    <div className="flex items-center gap-4">
+      <button onClick={() => setter(Math.max(0, value - 1))} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center font-bold text-gray-600">-</button>
+      <span className={`text-2xl font-black text-${color}-600`}>{value}</span>
+      <button onClick={() => setter(value + 1)} className="w-8 h-8 rounded-full bg-gray-900 text-white flex items-center justify-center font-bold">+</button>
+    </div>
+    {goal && <span className="text-[9px] mt-2 font-bold text-gray-400">GOAL: {goal}</span>}
+  </div>
+);
+
+// Helper Component for Numeric Inputs
+const InputCard = ({ icon, label, value, setter, color, goal }) => (
+  <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm flex flex-col items-center text-center">
+    <div className="mb-1">{icon}</div>
+    <span className="text-[10px] font-bold uppercase text-gray-400 tracking-tighter mb-2">{label}</span>
+    <input 
+      type="number" 
+      value={value} 
+      onChange={(e) => setter(parseInt(e.target.value) || 0)}
+      className="w-16 text-2xl font-black text-center focus:outline-none"
+    />
+    {goal && <span className="text-[9px] mt-2 font-bold text-gray-400 text-orange-500">MIN: {goal}</span>}
+  </div>
+);
+
+export default RealEstateTracker;
